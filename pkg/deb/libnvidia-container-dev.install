@@ -1,4 +1,0 @@
-usr/include/*.h
-usr/lib/@DEB_HOST_MULTIARCH@/lib*.so
-usr/lib/@DEB_HOST_MULTIARCH@/lib*.a
-usr/lib/@DEB_HOST_MULTIARCH@/pkgconfig/*.pc
