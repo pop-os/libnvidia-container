@@ -13,10 +13,10 @@ WITH_SECCOMP ?= yes
 
 ##### Global definitions #####
 
-export prefix      = /usr/local
+export prefix      = /usr
 export exec_prefix = $(prefix)
 export bindir      = $(exec_prefix)/bin
-export libdir      = $(exec_prefix)/lib
+export libdir      = $(exec_prefix)/lib/x86_64-linux-gnu
 export docdir      = $(prefix)/share/doc
 export libdbgdir   = $(prefix)/lib/debug$(libdir)
 export includedir  = $(prefix)/include
@@ -113,7 +113,8 @@ CFLAGS   := -std=gnu11 -O2 -g -fdata-sections -ffunction-sections -fstack-protec
             -Wall -Wextra -Wcast-align -Wpointer-arith -Wmissing-prototypes -Wnonnull \
             -Wwrite-strings -Wlogical-op -Wformat=2 -Wmissing-format-attribute -Winit-self -Wshadow \
             -Wstrict-prototypes -Wunreachable-code -Wconversion -Wsign-conversion \
-            -Wno-unknown-warning-option -Wno-format-extra-args -Wno-gnu-alignof-expression $(CFLAGS)
+            -Wno-unknown-warning-option -Wno-format-extra-args -Wno-gnu-alignof-expression \
+            -I/usr/include/tirpc $(CFLAGS)
 LDFLAGS  := -Wl,-zrelro -Wl,-znow -Wl,-zdefs -Wl,--gc-sections $(LDFLAGS)
 LDLIBS   := $(LDLIBS)
 
@@ -122,7 +123,7 @@ LIB_CPPFLAGS       = -DNV_LINUX -isystem $(DEPS_DIR)$(includedir) -include $(BUI
 LIB_CFLAGS         = -fPIC
 LIB_LDFLAGS        = -L$(DEPS_DIR)$(libdir) -shared -Wl,-soname=$(LIB_SONAME)
 LIB_LDLIBS_STATIC  = -l:libnvidia-modprobe-utils.a
-LIB_LDLIBS_SHARED  = -ldl -lcap
+LIB_LDLIBS_SHARED  = -ldl -lcap -ltirpc
 ifeq ($(WITH_LIBELF), yes)
 LIB_CPPFLAGS       += -DWITH_LIBELF
 LIB_LDLIBS_SHARED  += -lelf
@@ -150,6 +151,10 @@ BIN_CPPFLAGS       = -include $(BUILD_DEFS) $(CPPFLAGS)
 BIN_CFLAGS         = -I$(SRCS_DIR) -fPIE -flto $(CFLAGS)
 BIN_LDFLAGS        = -L. -pie $(LDFLAGS) -Wl,-rpath='$$ORIGIN/../$$LIB'
 BIN_LDLIBS         = -l:$(LIB_SHARED) -lcap $(LDLIBS)
+
+ifeq ($(WITH_TIRPC), yes)
+BIN_CPPFLAGS       += -isystem $(DEPS_DIR)$(includedir)/tirpc -DWITH_TIRPC
+endif
 
 $(word 1,$(LIB_RPC_SRCS)): RPCGENFLAGS=-h
 $(word 2,$(LIB_RPC_SRCS)): RPCGENFLAGS=-c
@@ -217,15 +222,14 @@ shared: $(LIB_SHARED)
 
 static: $(LIB_STATIC)($(LIB_STATIC_OBJ))
 
-deps: export DESTDIR:=$(DEPS_DIR)
 deps: $(LIB_RPC_SRCS) $(BUILD_DEFS)
 	$(MKDIR) -p $(DEPS_DIR)
-	$(MAKE) -f $(MAKE_DIR)/nvidia-modprobe.mk install
+	$(MAKE) -f $(MAKE_DIR)/nvidia-modprobe.mk DESTDIR=$(DEPS_DIR) install
 ifeq ($(WITH_LIBELF), no)
-	$(MAKE) -f $(MAKE_DIR)/elftoolchain.mk install
+	$(MAKE) -f $(MAKE_DIR)/elftoolchain.mk DESTDIR=$(DEPS_DIR) install
 endif
 ifeq ($(WITH_TIRPC), yes)
-	$(MAKE) -f $(MAKE_DIR)/libtirpc.mk install
+	$(MAKE) -f $(MAKE_DIR)/libtirpc.mk DESTDIR=$(DEPS_DIR) install
 endif
 
 install: all
@@ -287,7 +291,7 @@ distclean: clean
 
 deb: DESTDIR:=$(DIST_DIR)/$(LIB_NAME)_$(VERSION)_$(ARCH)
 deb: prefix:=/usr
-deb: libdir:=/usr/lib/@DEB_HOST_MULTIARCH@
+deb: libdir:=/usr/lib/x86_64-linux-gnu
 deb: install
 	$(CP) -T $(PKG_DIR)/deb $(DESTDIR)/debian
 	cd $(DESTDIR) && debuild -eDISTRIB -eSECTION --dpkg-buildpackage-hook='debian/prepare %v' -a$(ARCH) -us -uc -B

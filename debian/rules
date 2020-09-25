@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+#export DH_VERBOSE = 1
+
+export DESTDIR=debian/tmp
+
+pkgver=1.0.6
+
+prepare:
+	# mimic behavior from:
+	# https://github.com/NVIDIA/libnvidia-container/blob/56704b8dd297bf4daf82a2da4b270dc7f14e0008/mk/libtirpc.mk
+	deps_dir=deps/src/; \
+	for dep in elftoolchain-0.7.1.tar.bz2 nvidia-modprobe-396.51.tar.gz; do \
+		dep_dir="$${deps_dir}/$${dep%.tar*}"; \
+		mkdir -p $${dep_dir}; \
+		tar -xf "assets/$${dep}" -C "$${dep_dir}" --strip-components=1; \
+		touch "$${dep_dir}/.download_stamp"; \
+	done
+
+override_dh_clean: prepare
+	dh_clean
+
+override_dh_build:
+	make dist prefix=/usr
+	tar -xf dist/libnvidia-container_$(pkgver).tar.xz -C $(DESTDIR) --strip-components=1
+	CC=gcc make
+
+override_dh_fixperms:
+	dh_fixperms -X libnvidia-container.so.1.0.6
+
+%:
+	dh $@
