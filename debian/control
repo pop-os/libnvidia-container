@@ -9,8 +9,6 @@ Build-Depends:
   libtirpc-dev,
   lsb-release,
   pkg-config,
-  curl,
-  ca-certificates,
 Standards-Version: 4.3.0
 Maintainer: System76 <info@system76.com>
 Homepage: https://github.com/NVIDIA/libnvidia-container

@@ -9,7 +9,6 @@ libnvidia-container.a
 libnvidia-container.so*
 
 .debug
-deps
 src/build.h
 
 src/driver_clt.c
