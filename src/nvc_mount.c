@@ -780,8 +780,8 @@ nvc_driver_mount(struct nvc_context *ctx, const struct nvc_container *cnt, const
 
         /* IPC mounts */
         for (size_t i = 0; i < info->nipcs; ++i) {
-                /* XXX Only utility libraries require persistenced IPC, everything else is compute only. */
-                if (str_has_suffix(NV_PERSISTENCED_SOCKET, info->ipcs[i])) {
+                /* XXX Only utility libraries require persistenced or fabricmanager IPC, everything else is compute only. */
+                if (str_has_suffix(NV_PERSISTENCED_SOCKET, info->ipcs[i]) || str_has_suffix(NV_FABRICMANAGER_SOCKET, info->ipcs[i])) {
                         if (!(cnt->flags & OPT_UTILITY_LIBS))
                                 continue;
                 } else if (!(cnt->flags & OPT_COMPUTE_LIBS))
@@ -937,12 +937,8 @@ nvc_mig_config_global_caps_mount(struct nvc_context *ctx, const struct nvc_conta
         if (ns_enter(&ctx->err, cnt->mnt_ns, CLONE_NEWNS) < 0)
                 return (-1);
 
-        // Construct the path to the global MIG 'config' file in '/proc'.
-        if (path_join(&ctx->err, config, NV_MIG_CAPS_PATH, NV_MIG_CONFIG_FILE) < 0)
-                goto fail;
-
-        // Mount the 'config' file into the container.
-        if ((proc_mnt = mount_procfs_mig(&ctx->err, ctx->cfg.root, cnt, config)) == NULL)
+        // Mount the entire 'nvidia-capabilities' folder from '/proc' into the container.
+        if ((proc_mnt = mount_procfs_mig(&ctx->err, ctx->cfg.root, cnt, NV_PROC_DRIVER_CAPS)) == NULL)
                 goto fail;
 
         // Check if NV_CAPS_MODULE_NAME exists as a major device,
@@ -950,6 +946,9 @@ nvc_mig_config_global_caps_mount(struct nvc_context *ctx, const struct nvc_conta
         if (nvidia_get_chardev_major(NV_CAPS_MODULE_NAME) != -1) {
                 if ((dev_mnt = mount_directory(&ctx->err, ctx->cfg.root, cnt, NV_CAPS_DEVICE_DIR)) == NULL)
                     goto fail;
+
+                if (path_join(&ctx->err, config, NV_MIG_CAPS_PATH, NV_MIG_CONFIG_FILE) < 0)
+                        goto fail;
 
                 if (nvc_nvcaps_device_from_proc_path(ctx, config, &node) < 0)
                         goto fail;
@@ -1000,18 +999,17 @@ nvc_mig_monitor_global_caps_mount(struct nvc_context *ctx, const struct nvc_cont
         if (ns_enter(&ctx->err, cnt->mnt_ns, CLONE_NEWNS) < 0)
                 return (-1);
 
-        // Construct the path to the global MIG 'monitor' file in '/proc'.
-        if (path_join(&ctx->err, monitor, NV_MIG_CAPS_PATH, NV_MIG_MONITOR_FILE) < 0)
-                goto fail;
-
-        // Mount the 'monitor' file into the container.
-        if ((proc_mnt = mount_procfs_mig(&ctx->err, ctx->cfg.root, cnt, monitor)) == NULL)
+        // Mount the entire 'nvidia-capabilities' folder from '/proc' into the container.
+        if ((proc_mnt = mount_procfs_mig(&ctx->err, ctx->cfg.root, cnt, NV_PROC_DRIVER_CAPS)) == NULL)
                 goto fail;
 
         // Check if NV_CAPS_MODULE_NAME exists as a major device,
         // and if so, mount in the /dev based capability as a device.
         if (nvidia_get_chardev_major(NV_CAPS_MODULE_NAME) != -1) {
                 if ((dev_mnt = mount_directory(&ctx->err, ctx->cfg.root, cnt, NV_CAPS_DEVICE_DIR)) == NULL)
+                        goto fail;
+
+                if (path_join(&ctx->err, monitor, NV_MIG_CAPS_PATH, NV_MIG_MONITOR_FILE) < 0)
                         goto fail;
 
                 if (nvc_nvcaps_device_from_proc_path(ctx, monitor, &node) < 0)
@@ -1047,7 +1045,6 @@ int
 nvc_device_mig_caps_mount(struct nvc_context *ctx, const struct nvc_container *cnt, const struct nvc_device *dev)
 {
         // Initialize local variables.
-        char *proc_mnt = NULL;
         int nvcaps_major = -1;
         int rv = -1;
 
@@ -1061,15 +1058,12 @@ nvc_device_mig_caps_mount(struct nvc_context *ctx, const struct nvc_container *c
         if (ns_enter(&ctx->err, cnt->mnt_ns, CLONE_NEWNS) < 0)
                 return (-1);
 
-        // Mount the path to the mig MIG capabilities directory for this device in '/proc'.
-        if ((proc_mnt = mount_procfs_mig(&ctx->err, ctx->cfg.root, cnt, dev->mig_caps_path)) == NULL)
-                goto fail;
-
         // Check if NV_CAPS_MODULE_NAME exists as a major device, and if so,
         // mount in the appropriate /dev based capabilities as devices.
         if ((nvcaps_major = nvidia_get_chardev_major(NV_CAPS_MODULE_NAME)) != -1) {
-            if (setup_mig_minor_cgroups(&ctx->err, cnt, nvcaps_major, &dev->node) < 0)
-                goto fail;
+                if (!(cnt->flags & OPT_NO_CGROUPS))
+                        if (setup_mig_minor_cgroups(&ctx->err, cnt, nvcaps_major, &dev->node) < 0)
+                                goto fail;
         }
 
         // Set the return value to indicate success.
@@ -1077,17 +1071,10 @@ nvc_device_mig_caps_mount(struct nvc_context *ctx, const struct nvc_container *c
 
  fail:
         if (rv < 0) {
-                // If we failed above for any reason, unmount the 'access' file
-                // we mounted and exit the mount namespace.
-                unmount(proc_mnt);
                 assert_func(ns_enter_at(NULL, ctx->mnt_ns, CLONE_NEWNS));
         } else {
-                // Otherwise, just exit the mount namespace.
                 rv = ns_enter_at(&ctx->err, ctx->mnt_ns, CLONE_NEWNS);
         }
 
-        // In all cases, free the string associated with the mounted 'access'
-        // file and return.
-        free(proc_mnt);
         return (rv);
 }

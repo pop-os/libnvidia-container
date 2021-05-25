@@ -99,6 +99,32 @@ This package contains command-line tools that facilitate using the library.
 %{_bindir}/*
 
 %changelog
+* Sat Apr 24 2021 NVIDIA CORPORATION <cudatools@nvidia.com> 1.4.0-1
+- Mount all of /proc/.../nvidia/capabilities with --mig-{config, monitor}
+- Add fabricmanager as a valid IPC to inject into a container
+- Added libnvidia-nscq.so as an optional injected utility lib
+- Add Jenkinsfile for internal CI
+- Invoke docker make file separately
+- WSL - Add full NVML support for WSL in the container library
+
+* Fri Feb 05 2021 NVIDIA CORPORATION <cudatools@nvidia.com> 1.3.3-1
+- Promote 1.3.3-0.1.rc.2 to 1.3.3-1
+
+* Wed Feb 03 2021 NVIDIA CORPORATION <cudatools@nvidia.com> 1.3.3-0.1.rc.2
+- Remove path_join() with already chrooted directory
+
+* Wed Feb 03 2021 NVIDIA CORPORATION <cudatools@nvidia.com> 1.3.3-0.1.rc.1
+- Pre-create MIG related nvcaps at startup
+- Add more logging around device node creation with --load-kmods
+
+* Mon Jan 25 2021 NVIDIA CORPORATION <cudatools@nvidia.com> 1.3.2-1
+- Fix handling of /proc/PID/cgroups entries with colons in paths
+- Add pread64 as allowed syscall for ldconfig
+
+* Mon Dec 07 2020 NVIDIA CORPORATION <cudatools@nvidia.com> 1.3.1-1
+- Honor OPT_NO_CGROUPS in nvc_device_mig_caps_mount
+- Fix bug in resolving absolute symlinks in find_library_paths()
+
 * Wed Sep 16 2020 NVIDIA CORPORATION <cudatools@nvidia.com> 1.3.0-1
 - Promote 1.3.0-0.1.rc.1 to 1.3.0-1
 
