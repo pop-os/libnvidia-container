@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+#export DH_VERBOSE = 1
+
+export DESTDIR=debian/tmp
+
+pkgver=1.4.0
+
+override_dh_auto_clean:
+	make clean
+
+override_dh_build:
+	make dist prefix=/usr
+	tar -xf dist/libnvidia-container_$(pkgver).tar.xz -C $(DESTDIR) --strip-components=1
+	CC=gcc make
+
+override_dh_fixperms:
+	dh_fixperms -X libnvidia-container.so.$(pkgver)
+
+%:
+	dh $@
