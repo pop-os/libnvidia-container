@@ -1,4 +1,10 @@
-libnvidia-container (1.4.0-1) UNRELEASED; urgency=medium
+libnvidia-container (1.4.0-1pop1) focal; urgency=medium
+
+  * Pop Backport
+
+ -- Michael Aaron Murphy <mmstick@pm.me>  Tue, 03 Aug 2021 20:17:11 +0200
+
+libnvidia-container (1.4.0-1) focal; urgency=medium
 
   [ NVIDIA CORPORATION ]
   * Mount all of /proc/.../nvidia/capabilities with --mig-{config, monitor}

@@ -29,9 +29,9 @@ PLATFORM ?= $(shell uname -m)
 ifeq ($(DATE),)
 $(error Invalid date format)
 endif
-ifeq ($(REVISION),)
-$(error Invalid commit hash)
-endif
+# ifeq ($(REVISION),)
+# $(error Invalid commit hash)
+# endif
 ifeq ($(COMPILER),)
 $(error Invalid compiler)
 endif
