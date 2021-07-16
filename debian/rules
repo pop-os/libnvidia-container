@@ -1,0 +1,29 @@
+#!/usr/bin/make -f
+#export DH_VERBOSE = 1
+
+export DESTDIR=debian/tmp
+
+override_dh_auto_clean:
+	if ! ischroot; then \
+		wget https://go.dev/dl/go1.20.2.linux-amd64.tar.gz; \
+		mkdir -p "$(shell pwd)/go/"; \
+		tar -C "$(shell pwd)/" -xzf go1.20.2.linux-amd64.tar.gz; \
+		export "PATH=${PATH}:$(shell pwd)/go/bin/"; \
+		make clean; \
+		env GOCACHE="$(shell pwd)/go/cache" make deps; \
+		tar pcf gocache.tar "$(shell pwd)/go"; \
+		rm -rf "$(shell pwd)/go/"; \
+	fi
+
+override_dh_auto_build:
+	tar pxf gocache.tar
+	env GOCACHE="$(shell pwd)/go/cache" make
+
+override_dh_auto_install:
+	env GOCACHE="$(shell pwd)/go/cache" make install
+
+override_dh_fixperms:
+	dh_fixperms -X libnvidia-container.so.$(pkgver)
+
+%:
+	dh $@
