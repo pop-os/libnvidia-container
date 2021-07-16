@@ -17,17 +17,16 @@
 
 ##### Global variables #####
 
-WITH_NVCGO   ?= yes
-WITH_LIBELF  ?= no
+WITH_NVCGO   ?= no
+WITH_LIBELF  ?= yes
 WITH_TIRPC   ?= no
 WITH_SECCOMP ?= yes
 
 ##### Global definitions #####
-
-export prefix      = /usr/local
+export prefix      = /usr
 export exec_prefix = $(prefix)
 export bindir      = $(exec_prefix)/bin
-export libdir      = $(exec_prefix)/lib
+export libdir      = $(exec_prefix)/lib/x86_64-linux-gnu
 export docdir      = $(prefix)/share/doc
 export libdbgdir   = $(prefix)/lib/debug$(libdir)
 export includedir  = $(prefix)/include
@@ -139,12 +138,12 @@ LIBGO_SYMLINK := $(LIBGO_NAME).so
 ##### Flags definitions #####
 
 # Common flags
-CPPFLAGS := -D_GNU_SOURCE -D_FORTIFY_SOURCE=2 $(CPPFLAGS)
+CPPFLAGS := -D_GNU_SOURCE -D_FORTIFY_SOURCE=2 -fPIC $(CPPFLAGS)
 CFLAGS   := -std=gnu11 -O2 -g -fdata-sections -ffunction-sections -fplan9-extensions -fstack-protector -fno-strict-aliasing -fvisibility=hidden \
             -Wall -Wextra -Wcast-align -Wpointer-arith -Wmissing-prototypes -Wnonnull \
             -Wwrite-strings -Wlogical-op -Wformat=2 -Wmissing-format-attribute -Winit-self -Wshadow \
             -Wstrict-prototypes -Wunreachable-code -Wconversion -Wsign-conversion \
-            -Wno-unknown-warning-option -Wno-format-extra-args -Wno-gnu-alignof-expression $(CFLAGS)
+            -Wno-unknown-warning-option -Wno-format-extra-args -Wno-gnu-alignof-expression -fPIC $(CFLAGS)
 LDFLAGS  := -Wl,-zrelro -Wl,-znow -Wl,-zdefs -Wl,--gc-sections $(LDFLAGS)
 LDLIBS   := $(LDLIBS)
 
@@ -164,14 +163,15 @@ LIB_LDLIBS_SHARED  += -lelf
 else
 LIB_LDLIBS_STATIC  += -l:libelf.a
 endif
-ifeq ($(WITH_TIRPC), yes)
-LIB_CPPFLAGS       += -isystem $(DEPS_DIR)$(includedir)/tirpc -DWITH_TIRPC
-LIB_LDLIBS_STATIC  += -l:libtirpc.a
-LIB_LDLIBS_SHARED  += -lpthread
-endif
+# ifeq ($(WITH_TIRPC), yes)
+# LIB_CPPFLAGS       += -isystem $(DEPS_DIR)$(includedir)/tirpc -DWITH_TIRPC
+# LIB_LDLIBS_STATIC  += -l:libtirpc.a
+# LIB_LDLIBS_SHARED  += -lpthread
+# endif
+CFLAGS             += -I/usr/include/tirpc
 ifeq ($(WITH_SECCOMP), yes)
-LIB_CPPFLAGS       += -DWITH_SECCOMP $(shell pkg-config --cflags libseccomp)
-LIB_LDLIBS_SHARED  += $(shell pkg-config --libs libseccomp)
+LIB_CPPFLAGS       += -DWITH_SECCOMP -DWITH_TIRPC $(shell pkg-config --cflags libseccomp libtirpc)
+LIB_LDLIBS_SHARED  += $(shell pkg-config --libs libseccomp libtirpc)
 endif
 LIB_CPPFLAGS       += $(CPPFLAGS)
 LIB_CFLAGS         += $(CFLAGS)
@@ -211,7 +211,10 @@ $(BUILD_DEFS):
 
 $(LIB_RPC_SRCS): $(LIB_RPC_SPEC)
 	$(RM) $@
-	cd $(dir $@) && $(RPCGEN) $(RPCGENFLAGS) -C -M -N -o $(notdir $@) $(LIB_RPC_SPEC)
+	if cd $(dir $@); then \
+		$(RPCGEN) $(RPCGENFLAGS) -C -M -N -o $(notdir $@) $(LIB_RPC_SPEC); \
+		sed "s#$(CURDIR)/src/##g" -i "$@"; \
+	fi
 
 $(LIB_OBJS): %.lo: %.c | deps
 	$(CC) $(LIB_CFLAGS) $(LIB_CPPFLAGS) -MMD -MF $*.d -c $(OUTPUT_OPTION) $<
