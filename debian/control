@@ -1,4 +1,6 @@
 Source: libnvidia-container
+Section: libs
+Priority: optional
 Build-Depends:
   debhelper (>=9),
   bmake,
@@ -14,8 +16,6 @@ Maintainer: NVIDIA CORPORATION <cudatools@nvidia.com>
 Homepage: https://github.com/NVIDIA/libnvidia-container
 
 Package: libnvidia-container1
-Section: libs
-Priority: optional
 Architecture: amd64
 Multi-Arch: same
 Pre-Depends: ${misc:Pre-Depends}
@@ -28,8 +28,6 @@ Description: NVIDIA container runtime library
  This package requires the NVIDIA driver (>= 340.29) to be installed separately.
 
 Package: libnvidia-container-dev
-Section: libdevel
-Priority: optional
 Architecture: amd64
 Multi-Arch: same
 Depends: libnvidia-container1 (= ${binary:Version}), ${misc:Depends}
@@ -41,8 +39,6 @@ Description: NVIDIA container runtime library (development files)
  This package contains the files required to compile programs with the library.
 
 Package: libnvidia-container1-dbg
-Section: debug
-Priority: optional
 Architecture: amd64
 Multi-Arch: same
 Depends: libnvidia-container1 (= ${binary:Version}), ${misc:Depends}
@@ -55,7 +51,6 @@ Description: NVIDIA container runtime library (debugging symbols)
 
 Package: libnvidia-container-tools
 Section: utils
-Priority: optional
 Architecture: amd64
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: NVIDIA container runtime library (command-line tools)
